@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ponkey controller</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: #d3d3d3;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 32px;
+            color: #333;
+            font-weight: 300;
+            letter-spacing: 4px;
+        }
+
+        .connection-status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            background: #e8e8e8;
+            color: #666;
+        }
+
+        .connection-status.connected {
+            background: #4a4a4a;
+            color: white;
+        }
+
+        .transport {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .transport button {
+            padding: 10px 20px;
+            border: 2px solid #999;
+            border-radius: 8px;
+            background: #e8e8e8;
+            color: #333;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .transport button:active {
+            transform: scale(0.95);
+        }
+
+        .transport button.active {
+            background: #666;
+            color: white;
+            border-color: #444;
+        }
+
+        #resetBtn {
+            background: #ff6666;
+            border-color: #cc4444;
+            color: white;
+        }
+
+        #resetBtn:hover {
+            background: #ff4444;
+        }
+
+        .bpm-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #e8e8e8;
+            padding: 5px 15px;
+            border-radius: 8px;
+        }
+
+        .bpm-control input {
+            width: 120px;
+        }
+
+        .bpm-display {
+            font-weight: bold;
+            color: #333;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .round-keys-container {
+            background: #bbb;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .round-keys {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .round-key {
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: #e8e8e8;
+            border: 3px solid #999;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .round-key:active {
+            transform: scale(0.95);
+        }
+
+        .round-key.active {
+            background: #4a4a4a;
+            border-color: #333;
+            color: white;
+        }
+
+        .round-key.indicator::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ff6600;
+            box-shadow: 0 0 10px #ff6600;
+        }
+
+        .square-keys {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .square-key {
+            padding: 15px 10px;
+            background: #e8e8e8;
+            border: 2px solid #999;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .square-key:active {
+            transform: scale(0.95);
+        }
+
+        .square-key.selected {
+            background: #666;
+            color: white;
+            border-color: #444;
+        }
+
+        .square-key.recording {
+            background: #ff4444;
+            color: white;
+            border-color: #cc0000;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @media (min-width: 768px) {
+            .square-keys {
+                grid-template-columns: repeat(8, 1fr);
+            }
+        }
+
+        .debug-log {
+            margin-top: 20px;
+            padding: 10px;
+            background: #333;
+            color: #0f0;
+            font-family: monospace;
+            font-size: 11px;
+            height: 150px;
+            overflow-y: auto;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .debug-log.visible {
+            display: block;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal button {
+            width: 100%;
+            padding: 15px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 8px;
+            background: #4a4a4a;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+<div id="midiInputUI" style="margin-bottom:20px; display:flex; flex-wrap:wrap; gap:4px; justify-content:center;">
+  <!-- MIDI keys 48〜72 (C3〜C5) -->
+  <!-- We will render them via JS -->
+</div>
+<div id="aiResponseUI" style="margin-bottom:30px; display:flex; flex-wrap:wrap; gap:4px; justify-content:center;">
+  <!-- AI-generated keys (shown on PAD mode) -->
+</div>
+
+        <div class="header">
+            <h1 class="title">ponkey</h1>
+            <div class="connection-status" id="connectionStatus">未接続</div>
+        </div>
+
+        <div class="transport">
+            <button id="playBtn">▶ Play</button>
+            <button id="stopBtn">◼ Stop</button>
+            <button id="resetBtn">Reset</button>
+            <button id="tapBtn">Tap Tempo</button>
+            <div class="bpm-control">
+                <label>BPM:</label>
+                <input type="range" id="bpmSlider" min="60" max="200" value="100">
+                <div class="bpm-display" id="bpmDisplay">100</div>
+            </div>
+            <button id="debugBtn">Debug</button>
+        </div>
+
+        <div class="round-keys-container">
+            <div class="round-keys" id="roundKeys"></div>
+        </div>
+
+        <div class="square-keys" id="squareKeys"></div>
+
+        <div class="debug-log" id="debugLog"></div>
+    </div>
+
+    <div class="modal" id="connectionModal">
+        <div class="modal-content">
+            <h2>ponkey接続</h2>
+            <p style="margin: 20px 0; color: #666;">BLE-MIDI機器を検索します</p>
+            <button id="connectBtn">接続</button>
+            <button id="closeModalBtn" style="background: #999;">キャンセル</button>
+        </div>
+    </div>
+
+    <script>
+        // Web Audio API
+        let audioContext = null;
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // ドラムサウンド生成
+        function playDrumSound(type) {
+            if (!audioContext) initAudio();
+            
+            const now = audioContext.currentTime;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            switch(type) {
+                case 0: // KICK
+                    osc.frequency.setValueAtTime(60, now);
+                    osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    gain.gain.setValueAtTime(1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                    break;
+                    
+                case 1: // SNARE
+                    const bufferSize = audioContext.sampleRate * 0.1;
+                    const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+                    const output = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        output[i] = Math.random() * 2 - 1;
+                    }
+                    const noise = audioContext.createBufferSource();
+                    noise.buffer = buffer;
+                    const noiseGain = audioContext.createGain();
+                    noise.connect(noiseGain);
+                    noiseGain.connect(audioContext.destination);
+                    noiseGain.gain.setValueAtTime(0.5, now);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    noise.start(now);
+                    break;
+                    
+                case 2: // HAT
+                    osc.frequency.setValueAtTime(8000, now);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                    break;
+                    
+                case 3: // PERC
+                    osc.frequency.setValueAtTime(1000, now);
+                    osc.frequency.exponentialRampToValueAtTime(400, now + 0.03);
+                    gain.gain.setValueAtTime(0.5, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                    break;
+            }
+        }
+
+        // シンセサウンド生成
+        function playSynthSound(noteIndex, synthType) {
+            if (!audioContext) initAudio();
+            
+            const now = audioContext.currentTime;
+            const frequencies = [
+                261.63, 293.66, 329.63, 392.00,
+                440.00, 523.25, 587.33, 659.25,
+                783.99, 880.00, 1046.50, 1174.66,
+                1318.51, 1567.98, 1760.00, 2093.00
+            ];
+            
+            const freq = frequencies[noteIndex] || 440;
+            
+            switch(synthType) {
+                case 0: // PAD
+                    const osc1 = audioContext.createOscillator();
+                    const gain1 = audioContext.createGain();
+                    osc1.frequency.setValueAtTime(freq, now);
+                    osc1.type = 'sine';
+                    osc1.connect(gain1);
+                    gain1.connect(audioContext.destination);
+                    gain1.gain.setValueAtTime(0.3, now);
+                    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc1.start(now);
+                    osc1.stop(now + 0.5);
+                    break;
+                    
+                case 1: // LEAD
+                    const osc2 = audioContext.createOscillator();
+                    const gain2 = audioContext.createGain();
+                    const filter2 = audioContext.createBiquadFilter();
+                    osc2.frequency.setValueAtTime(freq, now);
+                    osc2.type = 'sawtooth';
+                    osc2.connect(filter2);
+                    filter2.connect(gain2);
+                    filter2.type = 'lowpass';
+                    filter2.frequency.setValueAtTime(2000, now);
+                    filter2.frequency.exponentialRampToValueAtTime(500, now + 0.3);
+                    gain2.connect(audioContext.destination);
+                    gain2.gain.setValueAtTime(0.2, now);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc2.start(now);
+                    osc2.stop(now + 0.3);
+                    break;
+                    
+                case 2: // PLUCK
+                    const osc3 = audioContext.createOscillator();
+                    const gain3 = audioContext.createGain();
+                    osc3.frequency.setValueAtTime(freq, now);
+                    osc3.type = 'square';
+                    osc3.connect(gain3);
+                    gain3.connect(audioContext.destination);
+                    gain3.gain.setValueAtTime(0.25, now);
+                    gain3.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc3.start(now);
+                    osc3.stop(now + 0.2);
+                    break;
+                    
+                case 3: // BELL
+                    const osc4a = audioContext.createOscillator();
+                    const osc4b = audioContext.createOscillator();
+                    const gain4 = audioContext.createGain();
+                    osc4a.frequency.setValueAtTime(freq, now);
+                    osc4b.frequency.setValueAtTime(freq * 2.1, now);
+                    osc4a.type = 'triangle';
+                    osc4b.type = 'triangle';
+                    osc4a.connect(gain4);
+                    osc4b.connect(gain4);
+                    gain4.connect(audioContext.destination);
+                    gain4.gain.setValueAtTime(0.2, now);
+                    gain4.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+                    osc4a.start(now);
+                    osc4b.start(now);
+                    osc4a.stop(now + 0.8);
+                    osc4b.stop(now + 0.8);
+                    break;
+            }
+        }
+
+        // アプリケーション状態
+        const app = {
+            device: null,
+            characteristic: null,
+            connected: false,
+            currentMode: 0,
+            isPlaying: false,
+            bpm: 100,
+            currentStep: 0,
+            intervalId: null,
+            tapTimes: [],
+            recordingLayer: -1,
+            recordingStartTime: 0,
+            loopDuration: 0,
+            rhythmPatterns: {
+                0: Array(16).fill(false),
+                1: Array(16).fill(false),
+                2: Array(16).fill(false),
+                3: Array(16).fill(false)
+            },
+            synthPatterns: {
+                4: [],
+                5: [],
+                6: [],
+                7: []
+            }
+        };
+
+        const MODE_NAMES = ['KICK', 'SNARE', 'HAT', 'PERC', 'PAD', 'LEAD', 'PLUCK', 'BELL'];
+        const MIDI_SERVICE_UUID = '03b80e5a-ede8-4b33-a751-6ce34ec4c700';
+        const MIDI_CHAR_UUID = '7772e5db-3868-4112-a1a9-f2669d106bf3';
+
+        function log(msg) {
+            const debugLog = document.getElementById('debugLog');
+            const time = new Date().toLocaleTimeString();
+            debugLog.innerHTML += `[${time}] ${msg}<br>`;
+            debugLog.scrollTop = debugLog.scrollHeight;
+            console.log(msg);
+        }
+
+        async function connectBLE() {
+            try {
+                log('BLE機器を検索中...');
+                
+                app.device = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: [MIDI_SERVICE_UUID] }]
+                });
+                
+                log(`デバイス発見: ${app.device.name}`);
+                
+                const server = await app.device.gatt.connect();
+                const service = await server.getPrimaryService(MIDI_SERVICE_UUID);
+                app.characteristic = await service.getCharacteristic(MIDI_CHAR_UUID);
+                
+                await app.characteristic.startNotifications();
+                app.characteristic.addEventListener('characteristicvaluechanged', handleMIDIData);
+                
+                app.connected = true;
+                updateConnectionStatus();
+                document.getElementById('connectionModal').classList.remove('show');
+                log('接続完了!');
+                
+            } catch (error) {
+                log(`エラー: ${error.message}`);
+                app.connected = false;
+                updateConnectionStatus();
+            }
+        }
+
+        async function sendMIDI(status, data1, data2 = null) {
+            if (!app.characteristic) return;
+            
+            const packet = [0x80, 0x80, status, data1];
+            if (data2 !== null) packet.push(data2);
+            
+            try {
+                await app.characteristic.writeValue(new Uint8Array(packet));
+            } catch (error) {
+                log(`送信エラー: ${error.message}`);
+            }
+        }
+
+        function handleMIDIData(event) {
+            const value = event.target.value;
+            const data = [];
+            for (let i = 0; i < value.byteLength; i++) {
+                data.push(value.getUint8(i));
+            }
+            
+            if (data.length < 3) return;
+            
+            const statusIndex = (data[0] & 0x80) ? 2 : 1;
+            if (statusIndex >= data.length) return;
+            
+            const status = data[statusIndex];
+            const command = status & 0xF0;
+            
+            if (command === 0x90) {
+                const note = data[statusIndex + 1];
+                const velocity = data[statusIndex + 2];
+                handleNoteOn(note, velocity);
+            } else if (command === 0x80) {
+                const note = data[statusIndex + 1];
+                handleNoteOff(note);
+            } else if (command === 0xB0) {
+                const control = data[statusIndex + 1];
+                const value = data[statusIndex + 2];
+                handleControlChange(control, value);
+            }
+        }
+
+        function handleNoteOn(note, velocity) {
+            if (note < 16) {
+                const button = document.querySelectorAll('.round-key')[note];
+                if (button) {
+                    if (app.currentMode >= 4) {
+                        // シンセモード：一時的に点灯
+                        button.classList.add('active');
+                        playSynthSound(note, app.currentMode - 4);
+                        
+                        if (app.recordingLayer >= 4 && app.currentMode >= 4) {
+                            const timestamp = Date.now() - app.recordingStartTime;
+                            app.synthPatterns[app.currentMode].push({
+                                note: note,
+                                timestamp: timestamp % app.loopDuration
+                            });
+                            log(`録音: Note ${note} at ${timestamp}ms`);
+                        }
+                    }
+                }
+            }
+        }
+
+        function handleNoteOff(note) {
+            if (note < 16) {
+                const button = document.querySelectorAll('.round-key')[note];
+                if (button && app.currentMode >= 4) {
+                    // シンセモード：消灯
+                    button.classList.remove('active');
+                }
+            }
+        }
+
+        function handleControlChange(control, value) {
+            if (control >= 16 && control < 32) {
+                // Ponkey側からのトグル状態更新
+                const keyIndex = control - 16;
+                if (keyIndex < 16 && app.currentMode < 4) {
+                    app.rhythmPatterns[app.currentMode][keyIndex] = (value > 0);
+                    updateRoundKeys();
+                    log(`Pattern sync: Mode ${app.currentMode}, Key ${keyIndex} = ${value > 0}`);
+                }
+            } else if (control < 8) {
+                selectMode(control);
+            }
+        }
+
+        function selectMode(mode) {
+            app.currentMode = mode;
+            
+            document.querySelectorAll('.square-key').forEach((btn, i) => {
+                btn.classList.toggle('selected', i === mode);
+            });
+            
+            updateRoundKeys();
+            log(`Mode: ${MODE_NAMES[mode]}`);
+        }
+
+        function updateRoundKeys() {
+            const buttons = document.querySelectorAll('.round-key');
+            
+            if (app.currentMode < 4) {
+                const pattern = app.rhythmPatterns[app.currentMode];
+                buttons.forEach((btn, i) => {
+                    btn.classList.toggle('active', pattern[i]);
+                });
+            } else {
+                buttons.forEach(btn => btn.classList.remove('active'));
+            }
+        }
+
+        function resetAllPatterns() {
+            // 全パターンをリセット
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 16; j++) {
+                    app.rhythmPatterns[i][j] = false;
+                }
+            }
+            
+            // シンセパターンもクリア
+            for (let i = 4; i < 8; i++) {
+                app.synthPatterns[i] = [];
+            }
+            
+            // UI更新
+            updateRoundKeys();
+            
+            // Ponkeyに通知
+            sendMIDI(0xB0, 0x42, 127);  // リセットコマンド
+            
+            log('All patterns reset');
+        }
+
+        function startSequencer() {
+            if (app.intervalId) clearInterval(app.intervalId);
+            
+            const stepDuration = 60000 / app.bpm / 4;
+            app.loopDuration = stepDuration * 16;
+            
+            app.intervalId = setInterval(() => {
+                if (!app.isPlaying) return;
+                
+                document.querySelectorAll('.round-key').forEach(btn => {
+                    btn.classList.remove('indicator');
+                });
+                document.querySelectorAll('.round-key')[app.currentStep]?.classList.add('indicator');
+                
+                // ドラムパターン再生
+                for (let layer = 0; layer < 4; layer++) {
+                    if (app.rhythmPatterns[layer][app.currentStep]) {
+                        playDrumSound(layer);
+                        sendMIDI(0x90, app.currentStep, 127);
+                        setTimeout(() => sendMIDI(0x80, app.currentStep, 0), 50);
+                    }
+                }
+                
+                // シンセパターン再生
+                const currentTime = (app.currentStep / 16) * app.loopDuration;
+                for (let layer = 4; layer < 8; layer++) {
+                    app.synthPatterns[layer].forEach(note => {
+                        if (Math.abs(note.timestamp - currentTime) < stepDuration / 2) {
+                            playSynthSound(note.note, layer - 4);
+                            sendMIDI(0x90, note.note, 127);
+                            setTimeout(() => sendMIDI(0x80, note.note, 0), 100);
+                        }
+                    });
+                }
+                
+                app.currentStep = (app.currentStep + 1) % 16;
+            }, stepDuration);
+        }
+
+        function initUI() {
+            // 円ボタン生成
+            const roundKeysContainer = document.getElementById('roundKeys');
+            for (let i = 0; i < 16; i++) {
+                const button = document.createElement('div');
+                button.className = 'round-key';
+                button.textContent = i + 1;
+                button.dataset.index = i;
+                
+                button.addEventListener('pointerdown', () => {
+                    if (app.currentMode < 4) {
+                        // リズムモード：トグル動作
+                        app.rhythmPatterns[app.currentMode][i] = !app.rhythmPatterns[app.currentMode][i];
+                        updateRoundKeys();
+                        
+                        // Ponkeyに状態を送信
+                        sendMIDI(0xB0, 16 + i, app.rhythmPatterns[app.currentMode][i] ? 127 : 0);
+                        
+                        if (app.rhythmPatterns[app.currentMode][i]) {
+                            playDrumSound(app.currentMode);
+                        }
+                    } else {
+                        // シンセモード：音を鳴らす
+                        playSynthSound(i, app.currentMode - 4);
+                        button.classList.add('active');
+                        sendMIDI(0x90, i, 127);
+                    }
+                });
+                
+                button.addEventListener('pointerup', () => {
+                    if (app.currentMode >= 4) {
+                        // シンセモード：Note Off
+                        button.classList.remove('active');
+                        sendMIDI(0x80, i, 0);
+                    }
+                });
+                
+                roundKeysContainer.appendChild(button);
+            }
+            
+            // 四角ボタン生成
+            const squareKeysContainer = document.getElementById('squareKeys');
+            MODE_NAMES.forEach((name, i) => {
+                const button = document.createElement('div');
+                button.className = 'square-key';
+                button.textContent = name;
+                button.dataset.index = i;
+                
+                if (i === 0) button.classList.add('selected');
+                
+                let longPressTimer;
+                
+                button.addEventListener('pointerdown', () => {
+                    longPressTimer = setTimeout(() => {
+                        if (i >= 4) {
+                            button.classList.add('recording');
+                            app.recordingLayer = i;
+                            app.recordingStartTime = Date.now();
+                            app.synthPatterns[i] = [];
+                            log(`録音開始: ${name}`);
+                        }
+                    }, 500);
+                });
+                
+                button.addEventListener('pointerup', () => {
+                    clearTimeout(longPressTimer);
+                    
+                    if (button.classList.contains('recording')) {
+                        button.classList.remove('recording');
+                        app.recordingLayer = -1;
+                        log(`録音終了: ${name}`);
+                    } else {
+                        selectMode(i);
+                        sendMIDI(0xB0, i, 127);
+                    }
+                });
+                
+                squareKeysContainer.appendChild(button);
+            });
+            
+            // Transport controls
+            document.getElementById('playBtn').addEventListener('click', () => {
+                app.isPlaying = true;
+                app.currentStep = 0;
+                document.getElementById('playBtn').classList.add('active');
+                sendMIDI(0xB0, 0x40, 127);
+                startSequencer();
+                log('Play');
+            });
+            
+            document.getElementById('stopBtn').addEventListener('click', () => {
+                app.isPlaying = false;
+                app.currentStep = 0;
+                document.getElementById('playBtn').classList.remove('active');
+                sendMIDI(0xB0, 0x40, 0);
+                if (app.intervalId) clearInterval(app.intervalId);
+                document.querySelectorAll('.round-key').forEach(btn => {
+                    btn.classList.remove('indicator');
+                });
+                log('Stop');
+            });
+            
+            // リセットボタン
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                resetAllPatterns();
+            });
+            
+            const bpmSlider = document.getElementById('bpmSlider');
+            const bpmDisplay = document.getElementById('bpmDisplay');
+            
+            bpmSlider.addEventListener('input', () => {
+                app.bpm = parseInt(bpmSlider.value);
+                bpmDisplay.textContent = app.bpm;
+                sendMIDI(0xB0, 0x41, app.bpm - 60);
+                if (app.isPlaying) startSequencer();
+            });
+            
+            document.getElementById('tapBtn').addEventListener('click', () => {
+                const now = Date.now();
+                app.tapTimes.push(now);
+                
+                if (app.tapTimes.length > 4) {
+                    app.tapTimes.shift();
+                }
+                
+                if (app.tapTimes.length >= 2) {
+                    const intervals = [];
+                    for (let i = 1; i < app.tapTimes.length; i++) {
+                        intervals.push(app.tapTimes[i] - app.tapTimes[i-1]);
+                    }
+                    const avgInterval = intervals.reduce((a, b) => a + b) / intervals.length;
+                    const bpm = Math.round(60000 / avgInterval);
+                    
+                    if (bpm >= 60 && bpm <= 200) {
+                        app.bpm = bpm;
+                        bpmSlider.value = bpm;
+                        bpmDisplay.textContent = bpm;
+                        sendMIDI(0xB0, 0x41, bpm - 60);
+                        if (app.isPlaying) startSequencer();
+                    }
+                }
+            });
+            
+            document.getElementById('debugBtn').addEventListener('click', () => {
+                document.getElementById('debugLog').classList.toggle('visible');
+            });
+            
+            document.getElementById('connectBtn').addEventListener('click', connectBLE);
+            document.getElementById('closeModalBtn').addEventListener('click', () => {
+                document.getElementById('connectionModal').classList.remove('show');
+            });
+        }
+
+        function updateConnectionStatus() {
+            const status = document.getElementById('connectionStatus');
+            if (app.connected) {
+                status.textContent = '接続済み';
+                status.classList.add('connected');
+            } else {
+                status.textContent = '未接続';
+                status.classList.remove('connected');
+            }
+        }
+
+        // 初期化
+        window.addEventListener('DOMContentLoaded', () => {
+            initUI();
+            
+            // 音声初期化（最初のクリックで有効化）
+            document.body.addEventListener('click', () => {
+                initAudio();
+            }, { once: true });
+            
+            setTimeout(() => {
+                if (!app.connected) {
+                    document.getElementById('connectionModal').classList.add('show');
+                }
+            }, 500);
+            
+            if (!navigator.bluetooth) {
+                log('⚠️ Web Bluetooth非対応');
+                alert('このブラウザはBLE非対応です。\nChromeまたはBluefyを使用してください。');
+            }
+        });
+    
+// === AI Duet用 WebMIDI 受信処理 ===
+navigator.requestMIDIAccess().then(onMIDISuccess, onMIDIFailure);
+
+function onMIDISuccess(midiAccess) {
+    for (let input of midiAccess.inputs.values()) {
+        input.onmidimessage = handleAIDuetMIDI;
+    }
+    log('✅ WebMIDI 接続完了（AI Duet連携）');
+}
+
+function onMIDIFailure(error) {
+    log('❌ WebMIDI 接続失敗: ' + error.message);
+}
+
+function handleAIDuetMIDI(message) {
+    const [status, data1, data2] = message.data;
+
+    // Note On
+    if ((status & 0xf0) === 0x90 && data2 > 0) {
+        sendMIDI(status, data1, data2);
+        highlightMIDINote(data1);
+    }
+    // Note Off
+    else if ((status & 0xf0) === 0x80 || ((status & 0xf0) === 0x90 && data2 === 0)) {
+        sendMIDI(0x80, data1, 0);
+    }
+    // Control Change
+    else if ((status & 0xf0) === 0xB0) {
+        sendMIDI(status, data1, data2);
+        highlightMIDINote(data1);
+    }
+
+    log(`🎼 WebMIDI: status=0x${status.toString(16)}, data1=${data1}, data2=${data2}`);
+}
+
+</script>
+
+<!-- Magenta.js for AI Duet -->
+<script src="https://cdn.jsdelivr.net/npm/@magenta/music@1.25.1/es6/core.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@magenta/music@1.25.1/es6/music_rnn.js"></script>
+<script>
+let rnnModel;
+let aiInitialized = false;
+
+// Magentaモデルの読み込み
+async function initAIDuet() {
+    const CHECKPOINT = 'https://storage.googleapis.com/magentadata/js/checkpoints/music_rnn/melody_rnn';
+    rnnModel = new mm.MusicRNN(CHECKPOINT);
+    await rnnModel.initialize();
+    aiInitialized = true;
+    log('🧠 Magenta MelodyRNN 初期化完了');
+}
+
+// MIDIノートをAIに送って応答を生成 → Ponkeyへ送信
+
+async function respondToNote(note) {
+    if (!aiInitialized) return;
+
+    const seed = {
+        notes: [{ pitch: note, startTime: 0, endTime: 0.5 }],
+        totalTime: 0.5
+    };
+
+    const rnnSteps = 8;
+    const temperature = 1.1;
+
+    const continuation = await rnnModel.continueSequence(seed, rnnSteps, temperature);
+
+    // 表示用UI
+    showAIResponse(continuation.notes);
+
+    for (const n of continuation.notes) {
+        const delayMs = n.startTime * 1000;
+        setTimeout(() => {
+            const p = n.pitch % 16;
+            sendMIDI(0x90, p, 127);
+            setTimeout(() => sendMIDI(0x80, p, 0), 100);
+        }, delayMs);
+    }
+
+    log(`🎹 AI応答生成（Note ${note} → ${continuation.notes.length} ノート）`);
+}
+
+
+// WebMIDIからの入力に応じてAI応答
+function handleAIDuetMIDI(message) {
+    const [status, data1, data2] = message.data;
+
+    if ((status & 0xf0) === 0x90 && data2 > 0) {
+        sendMIDI(status, data1, data2);
+        highlightMIDINote(data1); // 入力ノートもBLE送信
+        respondToNote(data1);          // AIで応答
+    } else if ((status & 0xf0) === 0x80 || ((status & 0xf0) === 0x90 && data2 === 0)) {
+        sendMIDI(0x80, data1, 0);
+    } else if ((status & 0xf0) === 0xB0) {
+        sendMIDI(status, data1, data2);
+        highlightMIDINote(data1);
+    }
+
+    log(`🎼 WebMIDI: status=0x${status.toString(16)}, data1=${data1}, data2=${data2}`);
+}
+
+// WebMIDI初期化
+navigator.requestMIDIAccess().then(access => {
+    for (let input of access.inputs.values()) {
+        input.onmidimessage = handleAIDuetMIDI;
+    }
+    log('✅ WebMIDI 接続完了（AI Duet連携）');
+}).catch(err => {
+    log('❌ WebMIDI 接続失敗: ' + err.message);
+});
+
+// 初期化フック
+window.addEventListener('DOMContentLoaded', () => {
+    initAIDuet();
+});
+</script>
+
+
+<script>
+const KEY_START = 48;
+const KEY_END = 72;
+const midiInputUI = document.getElementById('midiInputUI');
+const aiResponseUI = document.getElementById('aiResponseUI');
+
+// UI生成
+for (let i = KEY_START; i <= KEY_END; i++) {
+    const key = document.createElement('div');
+    key.className = 'midi-key';
+    key.dataset.note = i;
+    key.style.width = '24px';
+    key.style.height = '80px';
+    key.style.border = '1px solid #999';
+    key.style.borderRadius = '4px';
+    key.style.background = '#fff';
+    key.style.boxShadow = 'inset 0 0 3px #000';
+    key.style.display = 'flex';
+    key.style.alignItems = 'flex-end';
+    key.style.justifyContent = 'center';
+    key.style.fontSize = '10px';
+    key.style.color = '#333';
+    key.textContent = i;
+    midiInputUI.appendChild(key);
+}
+
+// MIDI入力受信時のハイライト
+function highlightMIDINote(note) {
+    const el = document.querySelector(`#midiInputUI [data-note='${note}']`);
+    if (el) {
+        el.style.background = '#4CAF50';
+        setTimeout(() => el.style.background = '#fff', 300);
+    }
+}
+
+// AI応答表示
+function showAIResponse(notes) {
+    aiResponseUI.innerHTML = ''; // 一度消す
+    notes.forEach(n => {
+        const key = document.createElement('div');
+        key.className = 'midi-ai-key';
+        key.style.width = '24px';
+        key.style.height = '40px';
+        key.style.borderRadius = '4px';
+        key.style.background = '#8000FF';
+        key.style.color = 'white';
+        key.style.fontSize = '10px';
+        key.style.display = 'flex';
+        key.style.alignItems = 'center';
+        key.style.justifyContent = 'center';
+        key.textContent = n.pitch;
+        aiResponseUI.appendChild(key);
+    });
+}
+</script>
+
+
+<script type="module">
+import * as mm from "https://cdn.jsdelivr.net/npm/@magenta/music@1.25.1/es6/music_rnn.js";
+
+let rnnModel;
+let aiInitialized = false;
+
+async function initAIDuet() {
+    const CHECKPOINT = 'https://storage.googleapis.com/magentadata/js/checkpoints/music_rnn/melody_rnn';
+    rnnModel = new mm.MusicRNN(CHECKPOINT);
+    await rnnModel.initialize();
+    aiInitialized = true;
+    console.log('🧠 Magenta MelodyRNN 初期化完了');
+}
+
+// AI応答を表示し、BLE送信する
+async function respondToNote(note) {
+    if (!aiInitialized) return;
+
+    const seed = {
+        notes: [{ pitch: note, startTime: 0, endTime: 0.5 }],
+        totalTime: 0.5
+    };
+
+    const rnnSteps = 8;
+    const temperature = 1.1;
+
+    const continuation = await rnnModel.continueSequence(seed, rnnSteps, temperature);
+
+    // 表示
+    const aiResponseUI = document.getElementById('aiResponseUI');
+    aiResponseUI.innerHTML = '';
+    continuation.notes.forEach(n => {
+        const el = document.createElement('div');
+        el.textContent = n.pitch;
+        el.style.width = '24px';
+        el.style.height = '40px';
+        el.style.borderRadius = '4px';
+        el.style.background = '#8000FF';
+        el.style.color = 'white';
+        el.style.fontSize = '10px';
+        el.style.display = 'flex';
+        el.style.alignItems = 'center';
+        el.style.justifyContent = 'center';
+        aiResponseUI.appendChild(el);
+    });
+
+    // Ponkey送信
+    continuation.notes.forEach(n => {
+        const delayMs = n.startTime * 1000;
+        const pitch = n.pitch % 16;
+        setTimeout(() => {
+            if (window.sendMIDI) {
+                window.sendMIDI(0x90, pitch, 127);
+                setTimeout(() => window.sendMIDI(0x80, pitch, 0), 100);
+            }
+        }, delayMs);
+    });
+
+    console.log(`🎹 AI応答生成（Note ${note} → ${continuation.notes.length} ノート）`);
+}
+
+// WebMIDI入力処理
+navigator.requestMIDIAccess().then(access => {
+    for (let input of access.inputs.values()) {
+        input.onmidimessage = msg => {
+            const [status, data1, data2] = msg.data;
+            if ((status & 0xf0) === 0x90 && data2 > 0) {
+                console.log(`🎼 WebMIDI Note On: ${data1}`);
+                const el = document.querySelector(`#midiInputUI [data-note='${data1}']`);
+                if (el) {
+                    el.style.background = '#4CAF50';
+                    setTimeout(() => el.style.background = '#fff', 300);
+                }
+                if (window.sendMIDI) {
+                    window.sendMIDI(0x90, data1, data2);
+                    respondToNote(data1);
+                }
+            } else if ((status & 0xf0) === 0x80 || ((status & 0xf0) === 0x90 && data2 === 0)) {
+                if (window.sendMIDI) window.sendMIDI(0x80, data1, 0);
+            }
+        };
+    }
+    console.log('✅ WebMIDI 接続完了（AI Duet連携）');
+}).catch(err => {
+    console.error('❌ WebMIDI接続失敗:', err.message);
+});
+
+window.addEventListener("DOMContentLoaded", initAIDuet);
+</script>
+
+</body>
+</html>
